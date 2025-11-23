@@ -5,9 +5,14 @@ import chromadb
 import anthropic
 import os
 
-# API Keys - these will be passed via environment or hardcoded
-NOMIC_API_KEY = "nk-z8OzW3Ioqd0Dn5H7LVDJnKbjJyNbmQM6qAqk2V9E9yM"
-CLAUDE_API_KEY = "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"
+# Get API keys from environment variables
+NOMIC_API_KEY = os.environ.get("NOMIC_API_KEY")
+CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+
+if not NOMIC_API_KEY:
+    raise ValueError("NOMIC_API_KEY environment variable is required")
+if not CLAUDE_API_KEY:
+    raise ValueError("ANTHROPIC_API_KEY environment variable is required")
 
 # Initialize Claude
 claude_client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
