@@ -79,6 +79,24 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
     matchScholarshipsMutation.mutate(data);
   };
 
+  const fillExampleData = () => {
+    form.setValue("name", "Alex Johnson");
+    form.setValue("gpa", 3.7);
+    form.setValue("degreeLevel", "undergraduate");
+    form.setValue("fieldOfStudy", "Computer Science");
+    form.setValue("citizenship", "United States");
+    form.setValue("age", 20);
+    form.setValue("activities", "President of Computer Science Club, member of Robotics Team, volunteer coding instructor for underprivileged youth, varsity tennis player");
+    form.setValue("backgroundStory", "I grew up in a small rural town where access to technology education was limited. Despite these challenges, I taught myself programming through online resources and library books. I'm the first in my family to attend college, and I'm passionate about using technology to solve real-world problems and give back to my community.");
+    form.setValue("careerGoals", "I aspire to become a software engineer specializing in artificial intelligence and machine learning. My goal is to develop accessible educational technology that helps students in underserved communities gain access to quality STEM education. Eventually, I want to start a nonprofit that provides free coding workshops in rural areas.");
+    form.setValue("challenges", "Coming from a low-income family, I've had to work part-time throughout high school to help support my family while maintaining my grades. I also faced limited access to advanced STEM courses and had to supplement my education through self-study and online courses.");
+    
+    toast({
+      title: "Example filled!",
+      description: "The form has been filled with sample data. Feel free to edit or submit as is.",
+    });
+  };
+
   return (
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
@@ -299,18 +317,30 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
               )}
             />
 
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full md:w-auto"
-              disabled={matchScholarshipsMutation.isPending}
-              data-testid="button-submit-profile"
-            >
-              {matchScholarshipsMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Find My Scholarships
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={fillExampleData}
+                data-testid="button-autofill"
+              >
+                Autofill Example
+              </Button>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full sm:w-auto"
+                disabled={matchScholarshipsMutation.isPending}
+                data-testid="button-submit-profile"
+              >
+                {matchScholarshipsMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Find My Scholarships
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
