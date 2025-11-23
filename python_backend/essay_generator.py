@@ -10,7 +10,7 @@ class EssayGenerator:
     """Generates scholarship essays using the strategy map and student profiles."""
 
     def __init__(self, strategy_map_path="python_backend/strategy_map.json"):
-        self.api_key = CLAUDE_API_KEY
+        self.api_key = os.environ.get("ANTHROPIC_API_KEY") or CLAUDE_API_KEY
         self.client = Anthropic(api_key=self.api_key)
         self.model = "claude-sonnet-4-20250514"
 
