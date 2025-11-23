@@ -4,14 +4,18 @@ import os
 import random
 from anthropic import Anthropic
 
-CLAUDE_API_KEY = "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"
+# Get API key from environment or use fallback
+CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or "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"
+
+# Initialize Claude client at module level (like the working scholarship matcher)
+claude_client = Anthropic(api_key=CLAUDE_API_KEY)
 
 class EssayGenerator:
     """Generates scholarship essays using the strategy map and student profiles."""
 
     def __init__(self, strategy_map_path="python_backend/strategy_map.json"):
-        self.api_key = os.environ.get("ANTHROPIC_API_KEY") or CLAUDE_API_KEY
-        self.client = Anthropic(api_key=self.api_key)
+        # Use the module-level client
+        self.client = claude_client
         self.model = "claude-sonnet-4-20250514"
 
         # Load the strategy map
