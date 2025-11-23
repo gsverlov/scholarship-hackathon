@@ -6,8 +6,8 @@ import path from "path";
 function executePythonScript(scriptPath: string, inputData: any): Promise<any> {
   return new Promise((resolve, reject) => {
     const python = spawn("python3", [scriptPath], {
-  env: process.env  // Pass environment variables to Python
-});
+      env: process.env  // ✅ FIXED: Pass environment variables
+    });
     
     let stdout = "";
     let stderr = "";
@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scriptPath = path.join(process.cwd(), "python_backend", "scholarship_matcher.py");
       const result = await executePythonScript(scriptPath, { studentProfile });
-
+      
       res.json(result);
     } catch (error) {
       console.error("Error matching scholarships:", error);
@@ -75,14 +75,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Extract scholarship name from description (first line or first 50 chars)
       const scholarshipName = scholarshipDescription.split("\n")[0].substring(0, 100);
-
+      
       const scriptPath = path.join(process.cwd(), "python_backend", "essay_generator.py");
       const result = await executePythonScript(scriptPath, {
         scholarshipDescription,
         studentProfile,
         scholarshipName
       });
-
+      
       res.json(result);
     } catch (error) {
       console.error("Error generating essay:", error);
@@ -91,6 +91,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
