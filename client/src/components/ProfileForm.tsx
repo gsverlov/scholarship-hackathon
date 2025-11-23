@@ -80,16 +80,16 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
   };
 
   const fillExampleData = () => {
-    form.setValue("name", "Alex Johnson");
-    form.setValue("gpa", 3.7);
+    form.setValue("name", "Jordan Chen");
+    form.setValue("gpa", 3.8);
     form.setValue("degreeLevel", "undergraduate");
-    form.setValue("fieldOfStudy", "Computer Science");
+    form.setValue("fieldOfStudy", "English Literature");
     form.setValue("citizenship", "United States");
-    form.setValue("age", 20);
-    form.setValue("activities", "President of Computer Science Club, member of Robotics Team, volunteer coding instructor for underprivileged youth, varsity tennis player");
-    form.setValue("backgroundStory", "I grew up in a small rural town where access to technology education was limited. Despite these challenges, I taught myself programming through online resources and library books. I'm the first in my family to attend college, and I'm passionate about using technology to solve real-world problems and give back to my community.");
-    form.setValue("careerGoals", "I aspire to become a software engineer specializing in artificial intelligence and machine learning. My goal is to develop accessible educational technology that helps students in underserved communities gain access to quality STEM education. Eventually, I want to start a nonprofit that provides free coding workshops in rural areas.");
-    form.setValue("challenges", "Coming from a low-income family, I've had to work part-time throughout high school to help support my family while maintaining my grades. I also faced limited access to advanced STEM courses and had to supplement my education through self-study and online courses.");
+    form.setValue("age", 19);
+    form.setValue("activities", "Editor-in-Chief of school literary magazine, founder of Poetry Slam Club, lead vocalist in jazz ensemble, volunteer creative writing tutor at community center, published poet in regional anthologies");
+    form.setValue("backgroundStory", "I discovered my love for words and music growing up in a multicultural neighborhood where stories and songs bridged language barriers. As a first-generation college student, I've used writing and music as tools to explore my identity and connect with others. I believe in the transformative power of the arts to build empathy and understanding across diverse communities.");
+    form.setValue("careerGoals", "I aspire to become a published author and arts educator, combining my passions for literature, poetry, and music. My goal is to create accessible creative writing programs for underserved youth and eventually establish a nonprofit arts center that provides free workshops in writing, poetry, and music. I also hope to write novels and poetry collections that amplify marginalized voices.");
+    form.setValue("challenges", "Growing up in a low-income household, I often lacked resources for formal music lessons or writing workshops. I taught myself piano through YouTube tutorials and developed my writing skills by reading library books and participating in free online writing communities. Balancing work to support my family while pursuing my artistic passions has taught me resilience and time management.");
     
     toast({
       title: "Example filled!",
