@@ -1,0 +1,45 @@
+~/workspace$ git checkout --ours
+fatal: '--ours/--theirs' needs the paths to check out
+~/workspace$ git checkout --ours python_backend/essay_generator.py
+Updated 1 path from the index
+~/workspace$ git add
+Nothing specified, nothing added.
+hint: Maybe you wanted to say 'git add .'?
+hint: Disable this message with "git config set advice.addEmptyPathspec false"
+~/workspace$ git add python_backend/essay_generator.py
+~/workspace$ git commit -m "add enviorment variables instead of hardcoding"
+[main ac9ab0c] add enviorment variables instead of hardcoding
+~/workspace$ git push origin main
+Enumerating objects: 77, done.
+Counting objects: 100% (66/66), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (49/49), done.
+Writing objects: 100% (49/49), 8.04 KiB | 4.02 MiB/s, done.
+Total 49 (delta 39), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (39/39), completed with 12 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Anthropic API Key —————————————————————————————————
+remote:        locations:
+remote:          - commit: 2034984fb995fe3b9bd77a9445538f3df69cf2fc
+remote:            path: .replit:55
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/gsverlov/scholarship-hackathon/security/secret-scanning/unblock-secret/35tD6SZn2ljX2Zaiq7wxVx4MpN5
+remote:     
+remote: 
+remote: 
+To https://github.com/gsverlov/scholarship-hackathon.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/gsverlov/scholarship-hackathon.git'
