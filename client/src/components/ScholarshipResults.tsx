@@ -32,7 +32,7 @@ export function ScholarshipResults({
       scholarship: ScholarshipMatch;
       profile: StudentProfile;
     }) => {
-      const response = await apiRequest<EssayResult>(
+      const response = await apiRequest(
         "POST",
         "/api/generate-essay",
         {
@@ -40,7 +40,8 @@ export function ScholarshipResults({
           studentProfile: profile,
         }
       );
-      return { result: response, scholarship };
+      const data = await response.json() as EssayResult;
+      return { result: data, scholarship };
     },
     onSuccess: ({ result, scholarship }) => {
       toast({

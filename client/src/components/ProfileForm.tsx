@@ -51,12 +51,13 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
 
   const matchScholarshipsMutation = useMutation({
     mutationFn: async (studentProfile: StudentProfile) => {
-      const response = await apiRequest<{ matches: ScholarshipMatch[] }>(
+      const response = await apiRequest(
         "POST",
         "/api/match-scholarships",
         { studentProfile }
       );
-      return response;
+      const data = await response.json() as { matches: ScholarshipMatch[] };
+      return data;
     },
     onSuccess: (data, variables) => {
       toast({
