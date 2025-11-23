@@ -5,7 +5,9 @@ import path from "path";
 
 function executePythonScript(scriptPath: string, inputData: any): Promise<any> {
   return new Promise((resolve, reject) => {
-    const python = spawn("python3", [scriptPath]);
+    const python = spawn("python3", [scriptPath], {
+  env: process.env  // Pass environment variables to Python
+});
     
     let stdout = "";
     let stderr = "";
