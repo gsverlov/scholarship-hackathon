@@ -2,19 +2,19 @@ import sys
 import json
 import os
 import random
-from anthropic import Anthropic
+import anthropic
 
-# Get API key from environment or use fallback
-CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or "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"
+# API Key - hardcoded the same way as the working scholarship matcher
+CLAUDE_API_KEY = "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"
 
-# Initialize Claude client at module level (like the working scholarship matcher)
-claude_client = Anthropic(api_key=CLAUDE_API_KEY)
+# Initialize Claude client EXACTLY like the working scholarship matcher
+claude_client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
 
 class EssayGenerator:
     """Generates scholarship essays using the strategy map and student profiles."""
 
     def __init__(self, strategy_map_path="python_backend/strategy_map.json"):
-        # Use the module-level client
+        # Use the module-level client (same as scholarship matcher)
         self.client = claude_client
         self.model = "claude-sonnet-4-20250514"
 
@@ -83,10 +83,10 @@ Only include clusters that have meaningful overlap with the target scholarship. 
 
 Respond with ONLY the JSON array, no additional text."""
 
-        response = self.client.messages.create(
-            model=self.model,
+        # Use messages.create EXACTLY like the working scholarship matcher
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
             max_tokens=500,
-            temperature=0.2,
             messages=[{"role": "user", "content": matching_prompt}]
         )
 
@@ -134,10 +134,10 @@ If the student can't execute ANY of the strategies well, return an empty array: 
 
 Respond with ONLY the JSON array, no additional text."""
 
-        response = self.client.messages.create(
-            model=self.model,
+        # Use messages.create EXACTLY like the working scholarship matcher
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
             max_tokens=500,
-            temperature=0.2,
             messages=[{"role": "user", "content": filter_prompt}]
         )
 
@@ -175,10 +175,10 @@ REQUIREMENTS:
 
 Write the complete essay now. Do not include a title or any preamble—just the essay text."""
 
-        response = self.client.messages.create(
-            model=self.model,
+        # Use messages.create EXACTLY like the working scholarship matcher
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
             max_tokens=4000,
-            temperature=0.7,
             messages=[{"role": "user", "content": generation_prompt}]
         )
 
