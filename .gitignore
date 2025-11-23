@@ -1,6 +1,41 @@
+# Dependencies
 node_modules
+
+# Build outputs
 dist
-.DS_Store
 server/public
-vite.config.ts.*
+
+# Environment variables (CRITICAL: Never commit API keys!)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# OS files
+.DS_Store
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.log
 *.tar.gz
+vite.config.ts.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# KEEP: ChromaDB database is needed for the app
+!attached_assets/chroma_scholarship_db/
