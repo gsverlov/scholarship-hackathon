@@ -1,0 +1,189 @@
+Main Orchestrator - Runs the complete scholarship essay generation system
+Coordinates Phase A (Strategy Mapping) and Phase B (Essay Generation)
+"""
+
+import os
+import sys
+import argparse
+from pathlib import Path
+
+# Import our modules
+from strategy_mapper import StrategyMapper, get_dummy_training_data
+from essay_generator import EssayGenerator, get_sample_student_profile, get_sample_scholarship_description
+
+
+class ScholarshipEssaySystem:
+    """
+    Main orchestrator for the two-phase scholarship essay system.
+    """
+
+    def __init__(self, api_key: str = None):
+        """
+        Initialize the system.
+
+        Args:
+            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+        """
+        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        if not self.api_key:
+            print("ERROR: Anthropic API key not found.")
+            print(
+                "Please set ANTHROPIC_API_KEY environment variable or pass api_key parameter.")
+            sys.exit(1)
+
+        self.strategy_map_path = "strategy_map.json"
+
+    def run_phase_a(self, training_data: list = None, force_rebuild: bool = False):
+        """
+        Phase A: Build or rebuild the strategy map.
+
+        Args:
+            training_data: List of essay-scholarship pairs (uses dummy data if None)
+            force_rebuild: If True, rebuild even if map exists
+        """
+        print("\n" + "="*70)
+        print("PHASE A: STRATEGY MAPPING")
+        print("="*70 + "\n")
+
+        # Check if map already exists
+        if Path(self.strategy_map_path).exists() and not force_rebuild:
+            print(f"Strategy map already exists at {self.strategy_map_path}")
+            print("Skipping Phase A. Use --rebuild to force regeneration.\n")
+            return
+
+        # Get training data
+        if training_data is None:
+            print("No training data provided. Using dummy data for demonstration.")
+            print("IMPORTANT: Replace get_dummy_training_data() with your real data!\n")
+            training_data = get_dummy_training_data()
+
+        # Initialize mapper and run analysis
+        mapper = StrategyMapper(api_key=self.api_key)
+        strategy_map = mapper.analyze_essays(training_data)
+        mapper.save_strategy_map(strategy_map, self.strategy_map_path)
+
+        print(
+            f"\n✓ Phase A complete. Strategy map saved to {self.strategy_map_path}\n")
+
+    def run_phase_b(self,
+                    scholarship_description: str = None,
+                    student_profile: dict = None,
+                    output_file: str = None):
+        """
+        Phase B: Generate an essay for a new scholarship.
+
+        Args:
+            scholarship_description: Target scholarship prompt
+            student_profile: Student's background and achievements
+            output_file: Optional file to save the essay to
+        """
+        print("\n" + "="*70)
+        print("PHASE B: ESSAY GENERATION")
+        print("="*70 + "\n")
+
+        # Check if strategy map exists
+        if not Path(self.strategy_map_path).exists():
+            print(f"ERROR: Strategy map not found at {self.strategy_map_path}")
+            print("Please run Phase A first (python main.py --build-map)")
+            sys.exit(1)
+
+        # Use sample data if not provided
+        if scholarship_description is None:
+            print("No scholarship description provided. Using sample data.\n")
+            scholarship_description = get_sample_scholarship_description()
+
+        if student_profile is None:
+            print("No student profile provided. Using sample data.\n")
+            student_profile = get_sample_student_profile()
+
+        # Initialize generator and create essay
+        generator = EssayGenerator(
+            strategy_map_path=self.strategy_map_path,
+            api_key=self.api_key
+        )
+
+        result = generator.generate_essay(
+            target_scholarship_description=scholarship_description,
+            student_profile=student_profile
+        )
+
+        # Display results
+        print("\n" + "="*70)
+        print("GENERATED ESSAY")
+        print("="*70 + "\n")
+        print(result['essay'])
+        print("\n" + "="*70)
+        print("METADATA")
+        print("="*70)
+        print(
+            f"Selected Strategy: {result['selected_strategy'].get('cluster_name', 'N/A')}")
+        print(f"Cluster ID: {result['selected_strategy']['cluster_id']}")
+        print(
+            f"All Matching Clusters: {', '.join(result['matching_clusters'])}")
+        print("="*70 + "\n")
+
+        # Save to file if requested
+        if output_file:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(result['essay'])
+            print(f"✓ Essay saved to {output_file}\n")
+
+        return result
+
+
+def main():
+    """
+    Main entry point with command-line interface.
+    """
+    parser = argparse.ArgumentParser(
+        description="Scholarship Essay Generation System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # First time setup - build the strategy map
+  python main.py --build-map
+  
+  # Generate an essay using sample data
+  python main.py --generate
+  
+  # Rebuild map and generate essay
+  python main.py --build-map --generate --rebuild
+  
+  # Save essay to file
+  python main.py --generate --output my_essay.txt
+        """
+    )
+
+    parser.add_argument('--build-map', action='store_true',
+                        help='Run Phase A: Build the strategy map')
+    parser.add_argument('--generate', action='store_true',
+                        help='Run Phase B: Generate an essay')
+    parser.add_argument('--rebuild', action='store_true',
+                        help='Force rebuild of strategy map even if it exists')
+    parser.add_argument('--output', type=str,
+                        help='Output file for generated essay')
+    parser.add_argument('--api-key', type=str,
+                        help='Anthropic API key (overrides environment variable)')
+
+    args = parser.parse_args()
+
+    # If no arguments, run both phases
+    if not (args.build_map or args.generate):
+        args.build_map = True
+        args.generate = True
+
+    # Initialize system
+    system = ScholarshipEssaySystem(api_key=args.api_key)
+
+    # Run requested phases
+    if args.build_map:
+        system.run_phase_a(force_rebuild=args.rebuild)
+
+    if args.generate:
+        system.run_phase_b(output_file=args.output)
+
+    print("\n✓ All requested operations complete!\n")
+
+
+if __name__ == "__main__":
+    main()

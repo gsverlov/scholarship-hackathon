@@ -1,0 +1,304 @@
+"""
+Essay Generator - Phase B: Runtime Execution Module
+Generates scholarship essays using the strategy map and student profiles.
+"""
+
+import json
+import os
+import random
+from typing import List, Dict, Any, Optional
+from anthropic import Anthropic
+
+
+class EssayGenerator:
+    """
+    Takes a new scholarship description and student profile,
+    matches it against the strategy map, and generates a winning essay.
+    """
+
+    def __init__(self, strategy_map_path: str = "strategy_map.json", api_key: str = None):
+        """
+        Initialize the Essay Generator.
+
+        Args:
+            strategy_map_path: Path to the strategy map JSON file
+            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+        """
+        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        if not self.api_key:
+            raise ValueError(
+                "Anthropic API key must be provided or set in ANTHROPIC_API_KEY environment variable")
+
+        self.client = Anthropic(api_key=self.api_key)
+        self.model = "claude-sonnet-4-20250514"
+
+        # Load the strategy map
+        if not os.path.exists(strategy_map_path):
+            raise FileNotFoundError(
+                f"Strategy map not found at {strategy_map_path}. Run strategy_mapper.py first.")
+
+        with open(strategy_map_path, 'r', encoding='utf-8') as f:
+            self.strategy_map = json.load(f)
+
+        print(f"Loaded strategy map with {len(self.strategy_map)} clusters")
+
+    def generate_essay(self,
+                       target_scholarship_description: str,
+                       student_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main essay generation workflow.
+
+        Args:
+            target_scholarship_description: The new scholarship prompt
+            student_profile: Student's background, achievements, and story
+
+        Returns:
+            Dict with 'essay', 'selected_strategy', and 'matching_clusters'
+        """
+        print("\n=== ESSAY GENERATION WORKFLOW ===\n")
+
+        # Step 1: Semantic Matching
+        print("Step 1: Finding matching strategy clusters...")
+        matching_clusters = self._find_matching_clusters(
+            target_scholarship_description)
+        print(f"Found {len(matching_clusters)} potential matches")
+
+        # Step 2: Student Feasibility Filter
+        print("\nStep 2: Filtering strategies based on student profile...")
+        valid_strategies = self._filter_by_student_capability(
+            matching_clusters,
+            student_profile
+        )
+
+        if not valid_strategies:
+            print("WARNING: No valid strategies found. Using best semantic match anyway.")
+            # Use top match as fallback
+            valid_strategies = matching_clusters[:1]
+
+        print(
+            f"Student can execute {len(valid_strategies)} of these strategies")
+
+        # Step 3: Random Selection
+        print("\nStep 3: Randomly selecting strategy...")
+        selected_strategy = random.choice(valid_strategies)
+        print(f"Selected: {selected_strategy.get('cluster_name', 'Strategy')}")
+
+        # Step 4: Generate the Essay
+        print("\nStep 4: Generating essay draft...")
+        essay = self._generate_draft(
+            target_scholarship_description,
+            student_profile,
+            selected_strategy
+        )
+
+        print("\n=== GENERATION COMPLETE ===\n")
+
+        return {
+            "essay": essay,
+            "selected_strategy": selected_strategy,
+            "matching_clusters": [c.get('cluster_name', f"Cluster {c['cluster_id']}")
+                                  for c in matching_clusters]
+        }
+
+    def _find_matching_clusters(self, target_description: str) -> List[Dict[str, Any]]:
+        """
+        Use Claude to identify which strategy clusters match the target scholarship.
+        """
+        # Build the matching prompt
+        archetypes_list = []
+        for cluster in self.strategy_map:
+            archetypes_list.append(f"""
+Cluster ID: {cluster['cluster_id']}
+Name: {cluster.get('cluster_name', 'N/A')}
+Description Archetype: {cluster['description_archetype']}
+""")
+
+        matching_prompt = f"""You are an expert at matching scholarship descriptions to writing strategies.
+
+TARGET SCHOLARSHIP DESCRIPTION:
+{target_description}
+
+AVAILABLE STRATEGY CLUSTERS:
+{"".join(archetypes_list)}
+
+TASK:
+Identify which clusters are semantically similar to the target scholarship. A scholarship may match multiple clusters (e.g., it could be both "Academic Research" and "Leadership").
+
+Rank the matches from most relevant to least relevant. Return ONLY a JSON array of cluster IDs in order of relevance:
+
+Example output: [3, 1, 5]
+
+Only include clusters that have meaningful overlap with the target scholarship. Return at minimum 1 and at maximum 4 cluster IDs.
+
+Respond with ONLY the JSON array, no additional text."""
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=500,
+            temperature=0.2,
+            messages=[{"role": "user", "content": matching_prompt}]
+        )
+
+        # Parse the cluster IDs
+        response_text = response.content[0].text.strip()
+        cluster_ids = json.loads(response_text)
+
+        # Return the full cluster objects
+        return [c for c in self.strategy_map if c['cluster_id'] in cluster_ids]
+
+    def _filter_by_student_capability(self,
+                                      clusters: List[Dict[str, Any]],
+                                      student_profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Filter strategies to only those the student can realistically execute.
+        """
+        student_profile_text = json.dumps(student_profile, indent=2)
+
+        filter_prompt = f"""You are evaluating whether a student can execute certain essay writing strategies.
+
+STUDENT PROFILE:
+{student_profile_text}
+
+STRATEGIES TO EVALUATE:
+"""
+
+        for cluster in clusters:
+            filter_prompt += f"""
+---
+Strategy {cluster['cluster_id']}: {cluster.get('cluster_name', 'N/A')}
+Requirements: {cluster['writing_strategy']['broad_instructions'][:300]}...
+"""
+
+        filter_prompt += """
+
+TASK:
+For each strategy, determine if the student has the background/experiences needed to execute it authentically and effectively.
+
+FILTERING RULES:
+- If a strategy requires "overcoming adversity/hardship" but the student has no hardships listed → REJECT
+- If a strategy requires "research experience" but the student has none → REJECT
+- If a strategy requires "leadership roles" but the student has minimal leadership → REJECT
+- If a strategy requires "technical/STEM accomplishments" but the student is humanities-focused → REJECT
+- If the student HAS relevant experiences for the strategy → ACCEPT
+
+Return ONLY a JSON array of cluster IDs that the student CAN execute:
+
+Example: [1, 3]
+
+If the student can't execute ANY of the strategies well, return an empty array: []
+
+Respond with ONLY the JSON array, no additional text."""
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=500,
+            temperature=0.2,
+            messages=[{"role": "user", "content": filter_prompt}]
+        )
+
+        response_text = response.content[0].text.strip()
+        valid_cluster_ids = json.loads(response_text)
+
+        return [c for c in clusters if c['cluster_id'] in valid_cluster_ids]
+
+    def _generate_draft(self,
+                        scholarship_description: str,
+                        student_profile: Dict[str, Any],
+                        strategy: Dict[str, Any]) -> str:
+        """
+        Generate the actual essay using Claude.
+        """
+        student_profile_text = json.dumps(student_profile, indent=2)
+
+        generation_prompt = f"""You are a skilled scholarship essay writer. Your task is to write a compelling essay for the following scholarship.
+
+SCHOLARSHIP DESCRIPTION:
+{scholarship_description}
+
+STUDENT PROFILE:
+{student_profile_text}
+
+WRITING STRATEGY TO FOLLOW:
+{strategy['writing_strategy']['broad_instructions']}
+
+STRUCTURAL TEMPLATE (YOU MUST FOLLOW THIS STRUCTURE):
+{strategy['writing_strategy']['structural_template']}
+
+REQUIREMENTS:
+1. Write in the first person from the student's perspective
+2. Strictly follow the structural template provided
+3. Make it authentic and personal, drawing from the student's actual experiences
+4. Keep the tone professional yet engaging
+5. Aim for 500-650 words
+6. Include specific, vivid details that bring the story to life
+7. End with a forward-looking conclusion that connects to the scholarship's goals
+
+Write the complete essay now. Do not include a title or any preamble—just the essay text."""
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=4000,
+            temperature=0.7,
+            messages=[{"role": "user", "content": generation_prompt}]
+        )
+
+        return response.content[0].text.strip()
+
+
+def get_sample_student_profile() -> Dict[str, Any]:
+    """
+    Sample student profile for testing.
+    """
+    return {
+        "name": "Sarah Chen",
+        "gpa": 3.87,
+        "major": "Computer Science",
+        "year": "Junior",
+        "extracurriculars": [
+            "President of Women in Tech club",
+            "Volunteer coding instructor at local community center",
+            "Member of ACM programming competition team"
+        ],
+        "achievements": [
+            "Developed mobile app for campus food pantry that serves 200+ students",
+            "2nd place in regional hackathon",
+            "Dean's List for 4 consecutive semesters"
+        ],
+        "background_story": "First-generation college student from a low-income immigrant family. Parents own a small restaurant. Learned to code using free online resources at the public library in high school.",
+        "career_goals": "Become a software engineer focused on building technology that increases accessibility and equity in education",
+        "notable_challenges": "Balanced 20 hours/week of work at family restaurant with full course load. Overcame limited access to technology and STEM resources in underfunded high school."
+    }
+
+
+def get_sample_scholarship_description() -> str:
+    """
+    Sample scholarship description for testing.
+    """
+    return """
+The Tech Innovation Scholarship awards $5,000 to students who demonstrate:
+- Creative problem-solving using technology
+- Commitment to using tech for social good
+- Leadership in their academic or local community
+- Overcoming obstacles to pursue their education
+
+Essay Prompt: Describe a time when you identified a problem and used technology to create an innovative solution. How did this experience shape your understanding of technology's potential to create positive change? (500-650 words)
+"""
+
+
+if __name__ == "__main__":
+    # Quick test of the generator
+    generator = EssayGenerator()
+
+    result = generator.generate_essay(
+        target_scholarship_description=get_sample_scholarship_description(),
+        student_profile=get_sample_student_profile()
+    )
+
+    print("\n" + "="*60)
+    print("GENERATED ESSAY:")
+    print("="*60)
+    print(result['essay'])
+    print("\n" + "="*60)
+    print(
+        f"Strategy Used: {result['selected_strategy'].get('cluster_name', 'N/A')}")
+    print(f"Matching Clusters: {', '.join(result['matching_clusters'])}")

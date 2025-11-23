@@ -1,0 +1,466 @@
+import requests
+import chromadb
+import anthropic
+import json
+
+# ------------------------------
+# Your API keys
+# ------------------------------
+NOMIC_API_KEY = "nk-z8OzW3Ioqd0Dn5H7LVDJnKbjJyNbmQM6qAqk2V9E9yM"
+CLAUDE_API_KEY = "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"
+
+# Initialize Claude
+claude_client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+
+# ------------------------------
+# Initialize ChromaDB
+# ------------------------------
+DB_PATH = r"C:\Users\gsv\source\repos\PythonApplication1\PythonApplication1\chroma_scholarship_db"
+print(f"📁 Database path: {DB_PATH}")
+
+chroma_client = chromadb.PersistentClient(path=DB_PATH)
+print("✅ Connected to local ChromaDB")
+
+try:
+    scholarships_collection = chroma_client.get_collection("scholarships")
+    print(f"📚 Loaded scholarships collection ({scholarships_collection.count()} scholarships available)")
+except Exception as e:
+    print(f"❌ Error: Could not load scholarships collection!")
+    print(f"   {e}")
+    raise SystemExit("Scholarships collection not found.")
+
+# ------------------------------
+# Step 1: Extract structured profile data
+# ------------------------------
+def extract_profile_structure(raw_profile):
+    """Extract structured data from profile for eligibility filtering."""
+    print("\n📋 Extracting structured profile data...")
+
+    prompt = f"""Extract eligibility information from this student profile.
+
+{raw_profile}
+
+Return ONLY valid JSON with these fields:
+{{
+  "gpa": <float or null>,
+  "degree_level": "high school" | "undergraduate" | "graduate" | "unknown",
+  "field_of_study": "string or null",
+  "citizenship": "string or null",
+  "age": <integer or null>,
+  "key_activities": ["activity1", "activity2", "activity3"]
+}}
+
+Be conservative - only extract what is explicitly stated. Use null if uncertain.
+For key_activities, list their 3-5 most significant activities/involvements.
+"""
+
+    try:
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        raw_text = response.content[0].text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("```")[1]
+            if raw_text.startswith("json"):
+                raw_text = raw_text[4:]
+        
+        structured_data = json.loads(raw_text.strip())
+        print(f"✅ Extracted: GPA={structured_data.get('gpa')}, Level={structured_data.get('degree_level')}")
+        return structured_data
+
+    except Exception as e:
+        print(f"⚠️ Failed to extract structure: {e}")
+        return {
+            "gpa": None,
+            "degree_level": "unknown",
+            "field_of_study": None,
+            "citizenship": None,
+            "age": None,
+            "key_activities": []
+        }
+
+# ------------------------------
+# Step 2: Enhance profile with genuine weighting
+# ------------------------------
+def enhance_and_weight_profile(student_profile, structured_data):
+    """Enhance profile AND apply true weighting by repeating key sections."""
+    print("\n🤖 Enhancing and weighting student profile...")
+    
+    prompt = f"""Analyze this student profile and create an enhanced description optimized for scholarship matching.
+
+CRITICAL RULES:
+1. ONLY elaborate on details EXPLICITLY mentioned - do not invent anything
+2. Focus heavily on activities, leadership, impact, and character
+3. Academic metrics like GPA are less important than demonstrated experiences
+4. Write in rich, specific language about their actual accomplishments
+
+Student Profile:
+{student_profile}
+
+Create a comprehensive description emphasizing (in priority order):
+1. **Leadership experiences and their impact** - What they led and what changed
+2. **Community service and values** - How they contribute and what matters to them
+3. **Unique projects, initiatives, or achievements** - What they've created
+4. **Skills and competencies demonstrated** - What they can DO
+5. **Passions and authentic interests** - What genuinely drives them
+6. **Character traits and qualities** - What kind of person they are
+7. Academic performance and field of study (mention briefly)
+
+Write 2-3 paragraphs that showcase what makes them special. Stay truthful to the original profile.
+"""
+
+    try:
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1200,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        enhanced = response.content[0].text.strip()
+        
+        # Apply TRUE weighting by repeating key activities
+        weighted_profile = enhanced + "\n\n"
+        
+        if structured_data.get("key_activities"):
+            activities_text = "Core strengths and activities: " + " | ".join(structured_data["key_activities"])
+            weighted_profile += activities_text + "\n"
+            weighted_profile += activities_text + "\n"  # Repeat for semantic weight
+        
+        print("✅ Profile enhanced with semantic weighting applied")
+        return weighted_profile
+        
+    except Exception as e:
+        print(f"⚠️ Enhancement failed, using original with basic weighting: {e}")
+        return student_profile + "\n\n" + student_profile
+
+# ------------------------------
+# Nomic embedding function
+# ------------------------------
+def embed_text_nomic(text):
+    """Generates an embedding for a given text using Nomic Embed API."""
+    if len(text) > 8000:
+        print(f"⚠️ Text truncated from {len(text)} to 8000 characters")
+        text = text[:8000]
+
+    try:
+        url = "https://api-atlas.nomic.ai/v1/embedding/text"
+        headers = {
+            "Authorization": f"Bearer {NOMIC_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "texts": [text],
+            "model": "nomic-embed-text-v1.5"
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        return data['embeddings'][0]
+
+    except Exception as e:
+        print(f"❌ Error generating embedding: {e}")
+        return None
+
+# ------------------------------
+# Step 3: Vector search with METADATA filtering
+# ------------------------------
+def vector_search(enhanced_profile, structured_data, top_k=15, distance_threshold=1.0):
+    """
+    Find top matching scholarships with distance filtering AND metadata filtering.
+    Now we can filter by structured criteria!
+    """
+    print(f"\n🔍 Performing vector search with metadata filtering...")
+    
+    student_vector = embed_text_nomic(enhanced_profile)
+    
+    if student_vector is None:
+        print("❌ Failed to generate embedding")
+        return []
+    
+    collection_count = scholarships_collection.count()
+    
+    try:
+        # Get more results initially to allow for filtering
+        results = scholarships_collection.query(
+            query_embeddings=[student_vector],
+            n_results=min(top_k * 3, collection_count)
+        )
+        
+        matches = []
+        filtered_out = {"gpa": 0, "degree_level": 0, "distance": 0}
+        
+        if results["ids"] and len(results["ids"]) > 0:
+            for i, scholarship_id in enumerate(results["ids"][0]):
+                distance = results["distances"][0][i]
+                metadata = results["metadatas"][0][i]
+                full_text = results["documents"][0][i] if results["documents"] else ""
+                
+                # Filter by distance threshold
+                if distance > distance_threshold:
+                    filtered_out["distance"] += 1
+                    continue
+                
+                # Filter by GPA if both student and scholarship have GPA data
+                if structured_data.get("gpa") and metadata.get("minimum_gpa"):
+                    try:
+                        min_gpa = float(metadata["minimum_gpa"])
+                        if structured_data["gpa"] < min_gpa:
+                            filtered_out["gpa"] += 1
+                            continue
+                    except (ValueError, TypeError):
+                        pass  # If GPA parsing fails, don't filter
+                
+                # Filter by degree level if specified
+                student_level = structured_data.get("degree_level", "").lower()
+                scholarship_levels = metadata.get("degree_levels", "").lower()
+                
+                if scholarship_levels and student_level != "unknown":
+                    # Only filter if scholarship explicitly requires a different level
+                    if scholarship_levels and student_level not in scholarship_levels:
+                        # But be lenient - only filter if it's clearly incompatible
+                        if ("undergraduate" in scholarship_levels and student_level == "graduate") or \
+                           ("graduate" in scholarship_levels and student_level == "high school"):
+                            filtered_out["degree_level"] += 1
+                            continue
+                
+                matches.append({
+                    "scholarship": scholarship_id,
+                    "distance": distance,
+                    "url": metadata.get("url", "N/A"),
+                    "full_text": full_text,
+                    "metadata": metadata
+                })
+        
+        # Sort by distance and take top k
+        matches = sorted(matches, key=lambda x: x['distance'])[:top_k]
+        
+        print(f"✅ Found {len(matches)} quality matches")
+        print(f"   Filtered out: {filtered_out['distance']} by distance, {filtered_out['gpa']} by GPA, {filtered_out['degree_level']} by degree level")
+        
+        return matches
+        
+    except Exception as e:
+        print(f"❌ Error in vector search: {e}")
+        return []
+
+# ------------------------------
+# Step 4: LLM Re-ranking with metadata awareness
+# ------------------------------
+def llm_rerank(enhanced_profile, structured_data, matches, top_k=5):
+    """
+    Use Claude to intelligently re-rank scholarships with full context.
+    """
+    if not matches:
+        return []
+    
+    print(f"\n🧠 AI re-ranking {len(matches)} scholarships...")
+    
+    # Format scholarships with FULL text AND metadata
+    scholarship_details = []
+    for i, match in enumerate(matches, 1):
+        meta = match['metadata']
+        scholarship_details.append({
+            "id": i,
+            "name": match['scholarship'],
+            "distance": round(match['distance'], 4),
+            "url": match['url'],
+            "description": match['full_text'],
+            "minimum_gpa": meta.get("minimum_gpa"),
+            "degree_levels": meta.get("degree_levels"),
+            "fields_of_study": meta.get("fields_of_study"),
+            "emphasis_areas": meta.get("emphasis_areas"),
+            "values_mission": meta.get("values_mission"),
+            "award_amount": meta.get("award_amount")
+        })
+    
+    prompt = f"""You are an expert scholarship advisor. Analyze how well each scholarship matches this student.
+
+CRITICAL PRIORITIES (in order):
+1. **Activity and emphasis alignment** - Do the student's activities match what the scholarship emphasizes?
+2. **Values and mission fit** - Do the student's demonstrated values align with scholarship mission?
+3. **Leadership and impact** - Does the student's impact match what the scholarship rewards?
+4. **Eligibility match** - Degree level, field of study, citizenship
+5. **Academic requirements** - GPA (least important unless scholarship is primarily academic)
+
+STUDENT PROFILE:
+{enhanced_profile}
+
+STUDENT DATA:
+- GPA: {structured_data.get('gpa', 'Not specified')}
+- Degree Level: {structured_data.get('degree_level', 'Unknown')}
+- Field of Study: {structured_data.get('field_of_study', 'Not specified')}
+- Key Activities: {', '.join(structured_data.get('key_activities', []))}
+
+SCHOLARSHIPS TO EVALUATE:
+{json.dumps(scholarship_details, indent=2)}
+
+Rank the top {top_k} scholarships from best to worst match.
+
+Return ONLY valid JSON in this exact format:
+{{
+  "rankings": [
+    {{
+      "rank": 1,
+      "scholarship_id": <id number from above>,
+      "scholarship_name": "<exact name>",
+      "match_score": <0-100>,
+      "reasoning": "<2-3 sentences explaining fit, focusing on activity/emphasis alignment>",
+      "key_alignments": ["<specific alignment 1>", "<specific alignment 2>"]
+    }}
+  ]
+}}
+
+Do not include any text outside the JSON object.
+"""
+
+    try:
+        response = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        raw_output = response.content[0].text.strip()
+        
+        # Clean markdown formatting if present
+        if raw_output.startswith("```"):
+            raw_output = raw_output.split("```")[1]
+            if raw_output.startswith("json"):
+                raw_output = raw_output[4:]
+            raw_output = raw_output.strip()
+        
+        rankings_data = json.loads(raw_output)
+        
+        # Map rankings back to original matches
+        reranked = []
+        id_to_match = {i+1: match for i, match in enumerate(matches)}
+        
+        for ranking in rankings_data.get("rankings", []):
+            scholarship_id = ranking.get("scholarship_id")
+            if scholarship_id in id_to_match:
+                match = id_to_match[scholarship_id].copy()
+                match['ai_score'] = ranking.get("match_score", 0)
+                match['reasoning'] = ranking.get("reasoning", "")
+                match['key_alignments'] = ranking.get("key_alignments", [])
+                reranked.append(match)
+        
+        print(f"✅ Successfully re-ranked {len(reranked)} scholarships")
+        return reranked
+        
+    except Exception as e:
+        print(f"⚠️ Re-ranking failed, returning vector search results: {e}")
+        return matches[:top_k]
+
+# ------------------------------
+# Main matching pipeline
+# ------------------------------
+def match_student_to_scholarships(student_profile, top_k=5):
+    """
+    Complete improved pipeline with metadata-aware filtering and ranking.
+    """
+    print("\n" + "="*70)
+    print("🎯 ENHANCED SCHOLARSHIP MATCHING PIPELINE")
+    print("="*70)
+    
+    # Step 1: Extract structured data for filtering
+    structured_data = extract_profile_structure(student_profile)
+    
+    # Step 2: Enhance and apply true semantic weighting
+    enhanced_profile = enhance_and_weight_profile(student_profile, structured_data)
+    
+    # Step 3: Vector search with metadata filtering
+    initial_matches = vector_search(
+        enhanced_profile, 
+        structured_data, 
+        top_k=10,
+        distance_threshold=1.0
+    )
+    
+    if not initial_matches:
+        print("\n❌ No suitable matches found after filtering.")
+        return []
+    
+    # Step 4: Re-rank with full context and metadata
+    final_matches = llm_rerank(enhanced_profile, structured_data, initial_matches, top_k=top_k)
+    
+    return final_matches
+
+# ------------------------------
+# Display results
+# ------------------------------
+def display_matches(matches):
+    """Display scholarship matches with detailed reasoning"""
+    if not matches:
+        print("\n⚠️ No matches found.")
+        return
+    
+    print(f"\n{'='*70}")
+    print(f"🎯 TOP {len(matches)} SCHOLARSHIP MATCHES")
+    print(f"{'='*70}")
+    
+    for i, match in enumerate(matches, 1):
+        print(f"\n{i}. {match['scholarship']}")
+        print(f"   {'─'*60}")
+        
+        if 'ai_score' in match:
+            print(f"   🎯 AI Match Score: {match['ai_score']}/100")
+        
+        vector_score = max(0, 100 - (match['distance'] * 100))
+        print(f"   📊 Vector Similarity: {vector_score:.1f}%")
+        
+        # Show scholarship emphasis areas
+        meta = match.get('metadata', {})
+        if meta.get('emphasis_areas'):
+            print(f"   🎨 Scholarship Values: {meta['emphasis_areas']}")
+        
+        if meta.get('award_amount'):
+            print(f"   💰 Award Amount: {meta['award_amount']}")
+        
+        if match.get('reasoning'):
+            print(f"   💡 Why it matches: {match['reasoning']}")
+        
+        if match.get('key_alignments'):
+            print(f"   ✨ Key alignments:")
+            for alignment in match['key_alignments']:
+                print(f"      • {alignment}")
+        
+        print(f"   🔗 URL: {match['url']}")
+    
+    print(f"\n{'='*70}")
+
+# ------------------------------
+# Main execution
+# ------------------------------
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("IMPROVED SCHOLARSHIP MATCHING APP")
+    print("Powered by ChromaDB + Claude AI + Rich Metadata")
+    print("="*70)
+    
+    print("\n\n🎓 EXAMPLE: Arts-focused student")
+    print("-" * 70)
+    
+    student_profile = """
+    Alex is an ambitious math and engineering student with a 3.9 GPA. He participates in robotics competitions, develops software projects, and has won regional math and engineering contests. He also volunteers with STEM outreach programs, mentoring younger students in problem-solving and coding. Alex is passionate about applying analytical thinking to real-world challenges and hopes to continue innovating in engineering and technology.
+    """
+    
+    print("Student Profile:")
+    print(student_profile.strip())
+    
+    matches = match_student_to_scholarships(student_profile, top_k=5)
+    display_matches(matches)
+    
+    print("\n" + "="*70)
+    print("✅ CRITICAL IMPROVEMENTS:")
+    print("   • Scholarships now enhanced/weighted like student profiles")
+    print("   • Rich metadata filtering (GPA, degree level, emphasis areas)")
+    print("   • Semantic space is now ALIGNED between students and scholarships")
+    print("   • Full scholarship descriptions used for re-ranking")
+    print("   • AI sees scholarship emphasis areas for better matching")
+    print("\n💡 This should produce dramatically more accurate matches!")
+    print("="*70)
