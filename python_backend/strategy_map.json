@@ -1,0 +1,65 @@
+[
+  {
+    "cluster_id": 1,
+    "cluster_name": "Overcoming Adversity Through Family Responsibility",
+    "description_archetype": "Scholarships with open topics or prompts asking about personal hardships, catastrophic life events, or challenges overcome. Often includes need-based scholarships, foundation scholarships, and those targeting first-generation college students or students from disadvantaged backgrounds. Keywords include 'hardship,' 'overcome,' 'challenges,' 'personal story,' and 'background.'",
+    "writing_strategy": {
+      "broad_instructions": "Focus on a specific hardship that demonstrates resilience and growth. Show how adversity led to increased responsibility, maturity, and determination. Emphasize family sacrifice and your role in supporting others. Connect struggles to future goals and how the scholarship will help break cycles of poverty or disadvantage.",
+      "structural_template": "Para 1: Vivid scene-setting that illustrates the hardship (eviction, poverty, family struggles)\nPara 2: Describe the impact and your response - taking on responsibility, working jobs, supporting family\nPara 3: Show growth and skills developed through adversity - leadership, work ethic, problem-solving\nPara 4: Connect experience to future goals and explain how scholarship enables continued focus on education rather than survival"
+    }
+  },
+  {
+    "cluster_id": 2,
+    "cluster_name": "Identity and Belonging Narrative",
+    "description_archetype": "Scholarships focused on diversity, minority experiences, LGBTQ+ identity, or cultural background. Often includes prompts about being part of underrepresented groups, study abroad programs emphasizing diversity, or questions about identity and belonging. Keywords include 'minority,' 'identity,' 'diversity,' 'underrepresented,' 'culture,' and 'community.'",
+    "writing_strategy": {
+      "broad_instructions": "Explore the complexity of identity, including conflicts between different aspects of yourself or feeling caught between communities. Show how your identity creates both challenges and strengths. Demonstrate how you've learned to embrace rather than hide your identity, and how you plan to use your experiences to help others or create change.",
+      "structural_template": "Para 1: Specific scene that illustrates identity conflict or discrimination\nPara 2: Describe the internal struggle and attempts to fit in or hide identity\nPara 3: Show the turning point where you embraced your identity and found strength in it\nPara 4: Connect to future goals of representation, advocacy, or community building"
+    }
+  },
+  {
+    "cluster_id": 3,
+    "cluster_name": "Passion-Driven Growth Story",
+    "description_archetype": "Scholarships with open topics or prompts asking about significant impacts, talents, or interests that define the applicant. Often university-specific scholarships or those asking about meaningful experiences. Keywords include 'passion,' 'talent,' 'impact,' 'meaningful,' and 'incomplete without it.'",
+    "writing_strategy": {
+      "broad_instructions": "Center the essay around a specific passion or activity that initially seemed impractical but proved transformative. Show how this passion developed unexpected skills, opened doors, or taught valuable life lessons. Demonstrate how the passion connects to broader goals and personal growth beyond the activity itself.",
+      "structural_template": "Para 1: Introduce the passion and initial skepticism from others about its value\nPara 2: Describe challenges faced in pursuing this passion and how it became a refuge or constant\nPara 3: Show how the passion led to unexpected opportunities, skills, or ways to help others\nPara 4: Reflect on broader life lessons and how the passion shapes your approach to challenges and goals"
+    }
+  },
+  {
+    "cluster_id": 4,
+    "cluster_name": "Social Justice and Change-Making Vision",
+    "description_archetype": "Scholarships with prompts about changing the world, addressing social issues, or making an impact. Often includes quotes from activists or leaders, and asks about specific changes students want to make. Keywords include 'change the world,' 'social justice,' 'inequality,' 'discrimination,' 'impact,' and 'activism.'",
+    "writing_strategy": {
+      "broad_instructions": "Identify a specific social issue you've personally experienced or witnessed. Propose a concrete, actionable plan for creating change, often involving modern tools like social media or technology. Acknowledge potential obstacles while showing determination. Connect your personal experience to the broader issue and demonstrate understanding of systemic problems.",
+      "structural_template": "Para 1: Personal anecdote that illustrates the social problem you want to address\nPara 2: Explain the broader scope of the issue and why it matters\nPara 3: Present your specific plan for creating change, including tools and methods\nPara 4: Acknowledge obstacles and reaffirm commitment to the cause"
+    }
+  },
+  {
+    "cluster_id": 5,
+    "cluster_name": "Values and Legacy Definition",
+    "description_archetype": "Scholarships asking about core values, important principles, or what defines you as a person. Often includes prompts about what's important to you, who you are, or what you want to be remembered for. Keywords include 'values,' 'important to you,' 'who you are,' 'legacy,' and 'principles.'",
+    "writing_strategy": {
+      "broad_instructions": "Identify three core values or priorities and explain their origins in your personal experience. Show how these values guide your decisions and actions. Demonstrate that these are enduring principles that will continue to shape your future. Connect values to specific experiences that formed them.",
+      "structural_template": "Para 1: Introduce your three core values with brief context\nPara 2: Explain the first value and its origin in your experience\nPara 3: Discuss the second and third values, showing how they interconnect\nPara 4: Reflect on why these values will remain important and how they'll guide your future"
+    }
+  },
+  {
+    "cluster_id": 6,
+    "cluster_name": "Failure and Resilience Learning",
+    "description_archetype": "Scholarships specifically asking about failure, setbacks, or times when things didn't go as planned. Often includes prompts about learning from mistakes, overcoming obstacles, or bouncing back from disappointment. Keywords include 'failure,' 'setback,' 'overcome,' 'learn,' 'resilience,' and 'never give up.'",
+    "writing_strategy": {
+      "broad_instructions": "Choose a specific, concrete failure that was genuinely disappointing or embarrassing. Show the immediate impact and your initial response. Focus heavily on what you learned and how you changed your approach. Demonstrate that the failure led to growth, renewed effort, or a better outcome later.",
+      "structural_template": "Para 1: Set up the context and describe the specific failure in detail\nPara 2: Show the immediate aftermath and your emotional response\nPara 3: Describe how you recovered, what you learned, and changes you made\nPara 4: Reflect on long-term growth and how this experience now guides your approach to challenges"
+    }
+  },
+  {
+    "cluster_id": 7,
+    "cluster_name": "Community Service and Perspective Transformation",
+    "description_archetype": "Scholarships focused on volunteer work, community service, or civic engagement. Prompts often ask how service shaped your perspective, influenced career goals, or taught you about humanity. Keywords include 'volunteer,' 'community service,' 'perspective,' 'humanity,' 'service,' and 'giving back.'",
+    "writing_strategy": {
+      "broad_instructions": "Describe a transformative service experience that changed how you see your community or the world. Show how stepping outside your comfort zone or usual environment provided new insights. Connect the service experience to your career goals and desire to continue helping others. Emphasize lessons about privilege, responsibility, and interconnectedness.",
+      "structural_template": "Para 1: Describe the service experience and initial motivations or expectations\nPara 2: Show the moment of perspective shift or key realization about your community/world\nPara 3: Explain how this experience influenced your goals and desire to serve others\nPara 4: Connect to future career plans and commitment to continued service or advocacy"
+    }
+  }
+]
