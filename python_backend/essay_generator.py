@@ -5,7 +5,7 @@ import random
 from anthropic import Anthropic
 
 # Get API key from environment or use fallback
-CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or "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"
+CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or "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"
 
 # Initialize Claude client at module level (like the working scholarship matcher)
 claude_client = Anthropic(api_key=CLAUDE_API_KEY)

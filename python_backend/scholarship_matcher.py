@@ -7,7 +7,7 @@ import os
 
 # API Keys - these will be passed via environment or hardcoded
 NOMIC_API_KEY = "nk-z8OzW3Ioqd0Dn5H7LVDJnKbjJyNbmQM6qAqk2V9E9yM"
-CLAUDE_API_KEY = "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"
+CLAUDE_API_KEY = "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"
 
 # Initialize Claude
 claude_client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
